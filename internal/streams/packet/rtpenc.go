@@ -30,6 +30,7 @@ type RtpTransfer struct {
 	writestop    chan bool
 	quit         chan bool
 	timerProcess *time.Ticker
+	Stop         bool
 }
 
 func NewRRtpTransfer(src string, pro int, ssrc int) *RtpTransfer {
@@ -43,6 +44,7 @@ func NewRRtpTransfer(src string, pro int, ssrc int) *RtpTransfer {
 		ssrc:      uint32(ssrc),
 		writestop: make(chan bool, 1),
 		quit:      make(chan bool, 1),
+		Stop:      false,
 	}
 }
 
@@ -128,7 +130,7 @@ func (rtp *RtpTransfer) Send2data(data []byte, key bool, pts uint64) {
 
 }
 
-func (rtp *RtpTransfer) SendPSdata(data []byte, key bool, pts uint64) {
+func (rtp *RtpTransfer) SendPSdata(data []byte, key bool, pts uint64) bool {
 	lens := len(data)
 	var index int
 	for lens > 0 {
@@ -143,20 +145,27 @@ func (rtp *RtpTransfer) SendPSdata(data []byte, key bool, pts uint64) {
 		// over the max pes len and split more pes load slice
 		index += pesload
 		lens -= pesload
+		stop := false
 		if lens > 0 {
-			rtp.fragmentation(pes, pts, 0)
+			stop = rtp.fragmentation(pes, pts, 0)
 		} else {
 			// the last slice
-			rtp.fragmentation(pes, pts, 1)
-
+			stop = rtp.fragmentation(pes, pts, 1)
+		}
+		if stop {
+			return stop
 		}
 
 	}
+	return false
 }
 
-func (rtp *RtpTransfer) fragmentation(data []byte, pts uint64, last int) {
+func (rtp *RtpTransfer) fragmentation(data []byte, pts uint64, last int) bool {
 	datalen := len(data)
 	if datalen+RTPHeaderLength <= RtpLoadLength {
+		if rtp.Stop {
+			return true
+		}
 		payload := rtp.encRtpHeader(data[:], 1, pts)
 		rtp.payload <- payload
 	} else {
@@ -169,11 +178,15 @@ func (rtp *RtpTransfer) fragmentation(data []byte, pts uint64, last int) {
 				sendlen = datalen
 			}
 			payload := rtp.encRtpHeader(data[index:index+sendlen], marker&last, pts)
+			if rtp.Stop {
+				return true
+			}
 			rtp.payload <- payload
 			datalen -= sendlen
 			index += sendlen
 		}
 	}
+	return false
 }
 func (rtp *RtpTransfer) encRtpHeader(data []byte, marker int, curpts uint64) []byte {
 
@@ -205,7 +218,7 @@ func (rtp *RtpTransfer) encRtpHeader(data []byte, marker int, curpts uint64) []b
 
 func (rtp *RtpTransfer) write4udp() {
 
-	log.Infof(" stream data will be write by(%v)", rtp.protocol)
+	log.Infof("write4udp stream data will be write by(udp)")
 	for {
 		select {
 		case data, ok := <-rtp.payload:
@@ -231,6 +244,7 @@ func (rtp *RtpTransfer) write4udp() {
 	}
 UDPSTOP:
 	rtp.udpconn.Close()
+	rtp.Stop = true
 	rtp.quit <- true
 }
 
@@ -283,7 +297,7 @@ TCPPASSIVESTOP:
 
 func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 
-	log.Infof(" stream data will be write by(%v)", rtp.protocol)
+	log.Infof("write4tcpactive stream data will be write by(tcp)")
 	var err error
 	rtp.tcpconn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", dstaddr, port))
 	if err != nil {
@@ -300,7 +314,7 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 			if ok {
 				lens, err := rtp.tcpconn.Write(data)
 				if err != nil || lens != len(data) {
-					log.Errorf("write data by tcp error(%v), len(%v).", err, lens, len(data))
+					log.Error("write data by tcp error", err, lens, len(data))
 					goto end
 				}
 
@@ -314,6 +328,7 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 		}
 	}
 end:
+	rtp.Stop = true
 }
 
 func (rtp *RtpTransfer) write4file() {
