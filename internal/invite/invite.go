@@ -2,6 +2,7 @@ package invite
 
 import (
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -79,7 +80,6 @@ func (inv *Invite) HandleMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 }
 func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg) {
 	// only handle invite idle state
-	xlog.Info("[S->C] invite")
 	if atomic.LoadInt32(&inv.state) != idle {
 		return
 	}
@@ -101,6 +101,7 @@ func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 	} else {
 		r.proto = "UDP"
 	}
+	xlog.Info("[S->C] invite", r.proto)
 
 	inv.remote = r
 
@@ -181,9 +182,12 @@ func randomFromStartEnd(min, max int) int {
 	return rand.Intn(max-min+1) + min
 }
 func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
+	time.Sleep(10 * time.Second)
 	if inv.remote.proto == "UDP" {
+		log.Println("new rtp transfer over udp, ip:", inv.remote.ip, "port:", inv.remote.port, "ssrc:", inv.remote.ssrc)
 		inv.rtp = packet.NewRRtpTransfer("", packet.UDPTransfer, inv.remote.ssrc)
 	} else {
+		log.Println("new rtp transfer over tcp")
 		//rtp = packet.NewRRtpTransfer("", packet.UDPTransfer, inv.remote.ssrc)
 		inv.rtp = packet.NewRRtpTransfer("", packet.TCPTransferActive, inv.remote.ssrc)
 	}
@@ -200,6 +204,7 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	}
 
 	defer func() {
+		log.Println("exit send rtp pkt routine")
 		f.Close()
 		inv.rtp.Exit()
 		inv.rtp = nil
@@ -209,22 +214,27 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	for {
 		select {
 		case <-inv.byed:
-			break
+			log.Println("got signal inv.byed exit")
+			goto end
 		default:
 			inv.sendFile(buf)
 		}
-
 	}
+end:
 }
 func (inv *Invite) sendFile(buf []byte) {
 	last := 0
 	var pts uint64 = 0
 	for i := 4; i < len(buf); i++ {
 		if inv.state == idle {
+			log.Println("stop send rtp pkt")
 			return
 		}
 		if isPsHead(buf[i : i+4]) {
-			inv.rtp.SendPSdata(buf[last:i], false, pts)
+			stop := inv.rtp.SendPSdata(buf[last:i], false, pts)
+			if stop {
+				return
+			}
 			pts += 40
 			time.Sleep(time.Millisecond * 40)
 			last = i
@@ -252,6 +262,7 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 	xlog.Info("[S->C] bye")
 	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
 	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	xlog.Info("inv.state:", inv.state, "callId:", m.CallID)
 	if atomic.LoadInt32(&inv.state) != confirmed ||
 		inv.leg.callID != m.CallID ||
 		!strings.EqualFold(inv.leg.fromTag, m.From.Param.Get("tag").Value) {
@@ -265,5 +276,7 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 	atomic.StoreInt32(&inv.state, idle)
 	xlog.Info("[C->S] 200OK(Bye)")
 	tr.Send <- resp
+	xlog.Info("notify inv.byed")
 	inv.byed <- true
+	xlog.Info("notify inv.byed done")
 }

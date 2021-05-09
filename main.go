@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 
 	cli "github.com/jawher/mow.cli"
@@ -12,6 +13,7 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	//xlog := xlog.NewWith(context.Background())
 	xlog.SetOutputLevel(0)
 	xlog.SetFlags(xlog.Llevel | xlog.Llongfile | xlog.Ltime)
@@ -32,7 +34,7 @@ func run(xlog *xlog.Logger, app *cli.Cli, conf *string) {
 	if err != nil {
 		xlog.Errorf("load config file failed, err = ", err)
 	}
-	xlog.Infof("config file = %#v", cfg)
+	//xlog.Infof("config file = %#v", cfg)
 	srv, err := useragent.NewService(xlog, cfg)
 	if err != nil {
 		xlog.Infof("new service failed err = %#v", err)

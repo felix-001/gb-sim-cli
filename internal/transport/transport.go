@@ -53,7 +53,7 @@ func recv(xlog *xlog.Logger, conn *net.UDPConn, output chan *sip.Msg) {
 			xlog.Errorf("parse msg failed, err =%v", err)
 			continue
 		}
-		xlog.Debug("recv msg \n", msg)
+		//xlog.Debug("recv msg \n", msg)
 		output <- msg
 	}
 }
@@ -61,7 +61,7 @@ func recv(xlog *xlog.Logger, conn *net.UDPConn, output chan *sip.Msg) {
 func send(xlog *xlog.Logger, conn *net.UDPConn, input chan *sip.Msg) {
 
 	for m := range input {
-		xlog.Debug("send msg \n", m)
+		//xlog.Debug("send msg \n", m)
 		if _, err := conn.Write([]byte(m.String())); err != nil {
 			xlog.Errorf("send msg failed, err = #v", err)
 		}

@@ -3,6 +3,7 @@ package catalog
 import (
 	"bytes"
 	"encoding/xml"
+	"log"
 	"net"
 	"strconv"
 	"time"
@@ -54,6 +55,7 @@ func (catalog *Catalog) Handle(xlog *xlog.Logger, tr *transport.Transport, req *
 	}
 	catalogInfo := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN)
 	go func() {
+		log.Println("send catalog response")
 		tr.Send <- catalogInfo
 	}()
 }
