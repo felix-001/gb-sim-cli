@@ -300,8 +300,8 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 			if ok {
 				lens, err := rtp.tcpconn.Write(data)
 				if err != nil || lens != len(data) {
-					//					log.Errorf("write data by tcp error(%v), len(%v).", err, lens, len(data))
-					break
+					log.Errorf("write data by tcp error(%v), len(%v).", err, lens, len(data))
+					goto end
 				}
 
 			} else {
@@ -310,9 +310,10 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 			}
 		case <-rtp.writestop:
 			log.Error("tcp rtp send channel stop")
-			break
+			goto end
 		}
 	}
+end:
 }
 
 func (rtp *RtpTransfer) write4file() {
