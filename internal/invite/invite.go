@@ -277,6 +277,13 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 	xlog.Info("[C->S] 200OK(Bye)")
 	tr.Send <- resp
 	xlog.Info("notify inv.byed")
-	inv.byed <- true
+	timeout := time.NewTimer(time.Millisecond * 500)
+	select {
+	case inv.byed <- true:
+		break
+	case <-timeout.C:
+		xlog.Info("notify inv.byed timeout")
+		break
+	}
 	xlog.Info("notify inv.byed done")
 }
