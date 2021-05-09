@@ -249,21 +249,21 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 	if m.IsResponse() {
 		return
 	}
-	xlog.Info("Server------>Bye--->Client")
+	xlog.Info("[S->C] bye")
 	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
 	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
 	if atomic.LoadInt32(&inv.state) != confirmed ||
 		inv.leg.callID != m.CallID ||
 		!strings.EqualFold(inv.leg.fromTag, m.From.Param.Get("tag").Value) {
 		resp := inv.makeRespFromReq(laHost, laPort, m, false, 481)
-		xlog.Info("Client------>481(Bye)--->Server")
+		xlog.Info("[C->S] 481(Bye)")
 		tr.Send <- resp
 		atomic.StoreInt32(&inv.state, idle)
 		return
 	}
 	resp := inv.makeRespFromReq(laHost, laPort, m, false, 200)
 	atomic.StoreInt32(&inv.state, idle)
-	xlog.Info("Client------>200OK(Bye)--->Server")
+	xlog.Info("[C->S] 200OK(Bye)")
 	tr.Send <- resp
 	inv.byed <- true
 }
