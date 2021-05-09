@@ -79,7 +79,7 @@ func (inv *Invite) HandleMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 }
 func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg) {
 	// only handle invite idle state
-	xlog.Info("Sever------>Invite--->Client")
+	xlog.Info("[S->C] invite")
 	if atomic.LoadInt32(&inv.state) != idle {
 		return
 	}
@@ -107,7 +107,7 @@ func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 	resp := inv.makeRespFromReq(laHost, laPort, m, true, 200)
 	inv.leg = &Leg{m.CallID, m.From.Param.Get("tag").Value, resp.To.Param.Get("tag").Value}
 	atomic.StoreInt32(&inv.state, completed)
-	xlog.Info("Client------>200OK(Invite)--->Server")
+	xlog.Info("[C->S] 200OK(Invite)")
 	tr.Send <- resp
 }
 func (inv *Invite) makeRespFromReq(localHost string, localPort int, req *sip.Msg, invite bool, code int) *sip.Msg {
@@ -170,7 +170,7 @@ func (inv *Invite) AckMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 		!strings.EqualFold(inv.leg.fromTag, m.From.Param.Get("tag").Value) {
 		return
 	}
-	xlog.Info("Server------>ACK--->Client")
+	xlog.Info("[S->C] invite ack")
 	atomic.StoreInt32(&inv.state, confirmed)
 	// start send rtp
 	go inv.sendRTPPacket(xlog)
