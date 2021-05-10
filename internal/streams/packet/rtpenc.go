@@ -306,6 +306,7 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 		log.Println("tcp connet to", dstaddr, ":", port, "success", rtp.tcpconn.LocalAddr().String())
 	}
 	defer func() {
+		log.Println("write4tcpactive routine exit, ", rtp.tcpconn.LocalAddr().String())
 		rtp.tcpconn.Close()
 		rtp.quit <- true
 	}()
