@@ -184,8 +184,8 @@ func randomFromStartEnd(min, max int) int {
 func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	time.Sleep(10 * time.Second)
 	//if inv.rtp != nil {
-	//	xlog.Info("rtp routine already exist, exit")
-	//	return
+	//xlog.Info("rtp routine already exist, exit")
+	//return
 	//}
 	if inv.remote.proto == "UDP" {
 		log.Println("new rtp transfer over udp, ip:", inv.remote.ip, "port:", inv.remote.port, "ssrc:", inv.remote.ssrc)
@@ -249,6 +249,7 @@ func (inv *Invite) sendFile(buf []byte) {
 	i++
 	//}
 	if i == len(buf) {
+		log.Println("reset i to 0")
 		i = 0
 	}
 }
