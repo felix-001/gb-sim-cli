@@ -187,14 +187,16 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	//xlog.Info("rtp routine already exist, exit")
 	//return
 	//}
+	var rtp *packet.RtpTransfer
 	if inv.remote.proto == "UDP" {
 		log.Println("new rtp transfer over udp, ip:", inv.remote.ip, "port:", inv.remote.port, "ssrc:", inv.remote.ssrc)
-		inv.rtp = packet.NewRRtpTransfer("", packet.UDPTransfer, inv.remote.ssrc)
+		rtp = packet.NewRRtpTransfer("", packet.UDPTransfer, inv.remote.ssrc)
 	} else {
 		log.Println("new rtp transfer over tcp, ssrc:", inv.remote.ssrc, "callid:", inv.leg.callID)
 		//rtp = packet.NewRRtpTransfer("", packet.UDPTransfer, inv.remote.ssrc)
-		inv.rtp = packet.NewRRtpTransfer("", packet.TCPTransferActive, inv.remote.ssrc)
+		rtp = packet.NewRRtpTransfer("", packet.TCPTransferActive, inv.remote.ssrc)
 	}
+	inv.rtp = rtp
 	// send ip,port and recv ip,port
 	err := inv.rtp.Service(inv.remote.lip, inv.remote.ip, inv.remote.lPort, inv.remote.port)
 	if err != nil {
@@ -203,14 +205,14 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	f, err := os.Open("test.dat")
 	if err != nil {
 		xlog.Errorf("read file error(%v)", err)
-		inv.rtp.Exit()
+		rtp.Exit()
 		return
 	}
 
 	defer func() {
 		log.Println("exit send rtp pkt routine callid:", inv.leg.callID, "ssrc:", inv.remote.ssrc)
 		f.Close()
-		inv.rtp.Exit()
+		rtp.Exit()
 		inv.rtp = nil
 	}()
 
@@ -221,7 +223,7 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 			log.Println("got signal inv.byed exit")
 			goto end
 		default:
-			inv.sendFile(buf)
+			inv.sendFile(buf, rtp)
 		}
 	}
 end:
@@ -229,7 +231,7 @@ end:
 
 var i int
 
-func (inv *Invite) sendFile(buf []byte) {
+func (inv *Invite) sendFile(buf []byte, rtp *packet.RtpTransfer) {
 	last := 0
 	var pts uint64 = 0
 	//for i := 4; i < len(buf); i++ {
@@ -241,7 +243,7 @@ func (inv *Invite) sendFile(buf []byte) {
 		log.Println("send", i, "buf len:", len(buf))
 	}
 	if isPsHead(buf[i : i+4]) {
-		stop := inv.rtp.SendPSdata(buf[last:i], false, pts)
+		stop := rtp.SendPSdata(buf[last:i], false, pts)
 		if stop {
 			return
 		}
