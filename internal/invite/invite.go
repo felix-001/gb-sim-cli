@@ -101,7 +101,7 @@ func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 	} else {
 		r.proto = "UDP"
 	}
-	xlog.Info("[S->C] invite", r.proto)
+	xlog.Info("[S->C] invite ", r.proto, "ssrc:", r.ssrc, "callId:", m.CallID)
 
 	inv.remote = r
 
@@ -183,11 +183,15 @@ func randomFromStartEnd(min, max int) int {
 }
 func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	time.Sleep(10 * time.Second)
+	//if inv.rtp != nil {
+	//	xlog.Info("rtp routine already exist, exit")
+	//	return
+	//}
 	if inv.remote.proto == "UDP" {
 		log.Println("new rtp transfer over udp, ip:", inv.remote.ip, "port:", inv.remote.port, "ssrc:", inv.remote.ssrc)
 		inv.rtp = packet.NewRRtpTransfer("", packet.UDPTransfer, inv.remote.ssrc)
 	} else {
-		log.Println("new rtp transfer over tcp")
+		log.Println("new rtp transfer over tcp, ssrc:", inv.remote.ssrc, "callid:", inv.leg.callID)
 		//rtp = packet.NewRRtpTransfer("", packet.UDPTransfer, inv.remote.ssrc)
 		inv.rtp = packet.NewRRtpTransfer("", packet.TCPTransferActive, inv.remote.ssrc)
 	}
@@ -204,7 +208,7 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	}
 
 	defer func() {
-		log.Println("exit send rtp pkt routine")
+		log.Println("exit send rtp pkt routine callid:", inv.leg.callID, "ssrc:", inv.remote.ssrc)
 		f.Close()
 		inv.rtp.Exit()
 		inv.rtp = nil
@@ -222,23 +226,30 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	}
 end:
 }
+
+var i int
+
 func (inv *Invite) sendFile(buf []byte) {
 	last := 0
 	var pts uint64 = 0
-	for i := 4; i < len(buf); i++ {
-		if inv.state == idle {
-			log.Println("stop send rtp pkt")
+	//for i := 4; i < len(buf); i++ {
+	//if inv.state == idle {
+	//log.Println("stop send rtp pkt")
+	//return
+	//}
+	if isPsHead(buf[i : i+4]) {
+		stop := inv.rtp.SendPSdata(buf[last:i], false, pts)
+		if stop {
 			return
 		}
-		if isPsHead(buf[i : i+4]) {
-			stop := inv.rtp.SendPSdata(buf[last:i], false, pts)
-			if stop {
-				return
-			}
-			pts += 40
-			time.Sleep(time.Millisecond * 40)
-			last = i
-		}
+		pts += 40
+		time.Sleep(time.Millisecond * 40)
+		last = i
+	}
+	i++
+	//}
+	if i == len(buf) {
+		i = 0
 	}
 }
 func isPsHead(buf []byte) bool {
@@ -259,7 +270,7 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 	if m.IsResponse() {
 		return
 	}
-	xlog.Info("[S->C] bye")
+	xlog.Info("[S->C] bye, callId:", m.CallID)
 	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
 	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
 	xlog.Info("inv.state:", inv.state, "callId:", m.CallID)

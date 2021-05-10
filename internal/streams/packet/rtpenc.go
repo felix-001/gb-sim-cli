@@ -163,9 +163,9 @@ func (rtp *RtpTransfer) SendPSdata(data []byte, key bool, pts uint64) bool {
 func (rtp *RtpTransfer) fragmentation(data []byte, pts uint64, last int) bool {
 	datalen := len(data)
 	if datalen+RTPHeaderLength <= RtpLoadLength {
-		if rtp.Stop {
-			return true
-		}
+		//if rtp.Stop {
+		//	return true
+		//}
 		payload := rtp.encRtpHeader(data[:], 1, pts)
 		rtp.payload <- payload
 	} else {
@@ -178,9 +178,9 @@ func (rtp *RtpTransfer) fragmentation(data []byte, pts uint64, last int) bool {
 				sendlen = datalen
 			}
 			payload := rtp.encRtpHeader(data[index:index+sendlen], marker&last, pts)
-			if rtp.Stop {
-				return true
-			}
+			//if rtp.Stop {
+			//	return true
+			//}
 			rtp.payload <- payload
 			datalen -= sendlen
 			index += sendlen
@@ -302,12 +302,15 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 	rtp.tcpconn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", dstaddr, port))
 	if err != nil {
 		log.Fatalln(err)
+	} else {
+		log.Println("tcp connet to", dstaddr, ":", port, "success")
 	}
 	defer func() {
 		rtp.tcpconn.Close()
 		rtp.quit <- true
 	}()
 
+	count := 0
 	for {
 		select {
 		case data, ok := <-rtp.payload:
@@ -317,6 +320,10 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 					log.Error("write data by tcp error", err, lens, len(data))
 					goto end
 				}
+				if count%200 == 0 {
+					log.Println("already send", count, "rtp pkts")
+				}
+				count++
 
 			} else {
 				log.Errorf("data channel closed")
