@@ -237,6 +237,9 @@ func (inv *Invite) sendFile(buf []byte) {
 	//log.Println("stop send rtp pkt")
 	//return
 	//}
+	if i%6000 == 0 {
+		log.Println("send", i, "buf len:", len(buf))
+	}
 	if isPsHead(buf[i : i+4]) {
 		stop := inv.rtp.SendPSdata(buf[last:i], false, pts)
 		if stop {
