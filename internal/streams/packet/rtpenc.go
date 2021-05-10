@@ -303,7 +303,7 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 	if err != nil {
 		log.Fatalln(err)
 	} else {
-		log.Println("tcp connet to", dstaddr, ":", port, "success")
+		log.Println("tcp connet to", dstaddr, ":", port, "success", rtp.tcpconn.LocalAddr().String())
 	}
 	defer func() {
 		rtp.tcpconn.Close()
@@ -317,11 +317,11 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 			if ok {
 				lens, err := rtp.tcpconn.Write(data)
 				if err != nil || lens != len(data) {
-					log.Error("write data by tcp error", err, lens, len(data))
+					log.Error("write data by tcp error", err, lens, len(data), rtp.tcpconn.LocalAddr().String())
 					goto end
 				}
-				if count%200 == 0 {
-					log.Println("already send", count, "rtp pkts")
+				if count%600 == 0 {
+					log.Println("already send", count, "rtp pkts", rtp.tcpconn.LocalAddr().String())
 				}
 				count++
 
