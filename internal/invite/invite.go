@@ -182,11 +182,12 @@ func randomFromStartEnd(min, max int) int {
 	return rand.Intn(max-min+1) + min
 }
 func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
-	time.Sleep(10 * time.Second)
+	//time.Sleep(10 * time.Second)
 	//if inv.rtp != nil {
 	//xlog.Info("rtp routine already exist, exit")
 	//return
 	//}
+	return
 	var rtp *packet.RtpTransfer
 	if inv.remote.proto == "UDP" {
 		log.Println("new rtp transfer over udp, ip:", inv.remote.ip, "port:", inv.remote.port, "ssrc:", inv.remote.ssrc)
