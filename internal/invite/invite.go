@@ -240,7 +240,7 @@ func (inv *Invite) sendFile(buf []byte, rtp *packet.RtpTransfer) {
 	//return
 	//}
 	if i%8000 == 0 {
-		log.Println("send", i, "buf len:", len(buf))
+		//log.Println("send", i, "buf len:", len(buf))
 	}
 	if isPsHead(buf[i : i+4]) {
 		stop := rtp.SendPSdata(buf[last:i], false, pts)
