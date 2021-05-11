@@ -321,7 +321,7 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 					log.Error("write data by tcp error", err, lens, len(data), rtp.tcpconn.LocalAddr().String())
 					goto end
 				}
-				if count%600 == 0 {
+				if count%6000 == 0 {
 					log.Println("already send", count, "rtp pkts", rtp.tcpconn.LocalAddr().String())
 				}
 				count++
