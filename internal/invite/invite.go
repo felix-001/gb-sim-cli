@@ -187,7 +187,6 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	//xlog.Info("rtp routine already exist, exit")
 	//return
 	//}
-	return
 	var rtp *packet.RtpTransfer
 	if inv.remote.proto == "UDP" {
 		log.Println("new rtp transfer over udp, ip:", inv.remote.ip, "port:", inv.remote.port, "ssrc:", inv.remote.ssrc)
