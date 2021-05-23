@@ -229,19 +229,11 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 end:
 }
 
-var i int
+var i = 0
+var pts uint64 = 0
+var last = 0
 
 func (inv *Invite) sendFile(buf []byte, rtp *packet.RtpTransfer) {
-	last := 0
-	var pts uint64 = 0
-	//for i := 4; i < len(buf); i++ {
-	//if inv.state == idle {
-	//log.Println("stop send rtp pkt")
-	//return
-	//}
-	if i%8000 == 0 {
-		//log.Println("send", i, "buf len:", len(buf))
-	}
 	if isPsHead(buf[i : i+4]) {
 		stop := rtp.SendPSdata(buf[last:i], false, pts)
 		if stop {
@@ -252,7 +244,6 @@ func (inv *Invite) sendFile(buf []byte, rtp *packet.RtpTransfer) {
 		last = i
 	}
 	i++
-	//}
 	if i == len(buf) {
 		log.Println("reset i to 0")
 		i = 0
