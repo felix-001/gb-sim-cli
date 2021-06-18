@@ -62,7 +62,7 @@ func NewInvite(cfg *config.Config) *Invite {
 
 func (inv *Invite) HandleMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg) {
 	if m.CSeqMethod == sip.MethodInvite && strings.ToUpper(m.Payload.ContentType()) == "APPLICATION/SDP" {
-		//inv.InviteMsg(xlog, tr, m)
+		inv.InviteMsg(xlog, tr, m)
 		return
 	}
 	if m.CSeqMethod == sip.MethodAck {
@@ -72,7 +72,7 @@ func (inv *Invite) HandleMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 		// send rtp msg
 	}
 	if m.CSeqMethod == sip.MethodBye {
-		//inv.ByeMsg(xlog, tr, m)
+		inv.ByeMsg(xlog, tr, m)
 		return
 	}
 
