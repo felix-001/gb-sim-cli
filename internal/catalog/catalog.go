@@ -154,6 +154,44 @@ func (cataInfo *catalogInfo) ContentType() string {
 	return "Application/MANSCDP+xml"
 }
 func (cataInfo *catalogInfo) Data() []byte {
-	data, _ := xml.MarshalIndent(cataInfo, "  ", "    ")
-	return []byte(xml.Header + string(data))
+	//data, _ := xml.MarshalIndent(cataInfo, " ", "    ")
+	//bytes.Replace(data, []byte(""), []byte("\r\n"), -1)
+	catalogBody := "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
+		"<Response>\r\n" +
+		"<CmdType>Catalog</CmdType>\r\n" +
+		"<SN>0</SN>\r\n" +
+		"<DeviceID>31011500991180000130</DeviceID>\r\n" +
+		"<SumNum>4</SumNum>\r\n" +
+		"<DeviceList Num=\"2\">\r\n" +
+		"<Item>\r\n" +
+		"<DeviceID>32011500991320000040</DeviceID>\r\n" +
+		"<Name>test001</Name>\r\n" +
+		"<Manufacturer>Hikvision</Manufacturer>\r\n" +
+		"<Model>Mars</Model>\r\n" +
+		"<Owner></Owner>\r\n" +
+		"<CivilCode>civilCode</CivilCode>\r\n" +
+		"<Address>192.18.1.1</Address>\r\n" +
+		"<Parental>0</Parental>\r\n" +
+		"<SafetyWay>1</SafetyWay>\r\n" +
+		"<RegisterWay>1</RegisterWay>\r\n" +
+		"<Secrecy>1</Secrecy>\r\n" +
+		"<Status>ON</Status>\r\n" +
+		"</Item>\r\n" +
+		"<Item>\r\n" +
+		"<DeviceID>32011500991320000050</DeviceID>\r\n" +
+		"<Name>test002</Name>\r\n" +
+		"<Manufacturer>Hikvision</Manufacturer>\r\n" +
+		"<Model>Mars</Model>\r\n" +
+		"<Owner></Owner>\r\n" +
+		"<CivilCode>civilCode</CivilCode>\r\n" +
+		"<Address>192.18.1.2</Address>\r\n" +
+		"<Parental>0</Parental>\r\n" +
+		"<SafetyWay>1</SafetyWay>\r\n" +
+		"<RegisterWay>1</RegisterWay>\r\n" +
+		"<Secrecy>1</Secrecy>\r\n" +
+		"<Status>ON</Status>\r\n" +
+		"</Item>\r\n" +
+		"</DeviceList>\r\n" +
+		"</Response>\r\n"
+	return []byte(xml.Header + catalogBody)
 }
