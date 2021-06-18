@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	version = "pokémon/0.2"
+	version = "Embedded Net DVR/NVR/DVS"
 )
 
 func Version() string {

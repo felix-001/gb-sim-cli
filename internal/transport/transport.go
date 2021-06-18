@@ -53,7 +53,7 @@ func recv(xlog *xlog.Logger, conn *net.UDPConn, output chan *sip.Msg) {
 			xlog.Errorf("parse msg failed, err =%v", err)
 			continue
 		}
-		//xlog.Debug("recv msg \n", msg)
+		xlog.Debug("recv msg \n", msg)
 		output <- msg
 	}
 }
