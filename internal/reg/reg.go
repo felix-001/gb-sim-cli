@@ -146,7 +146,7 @@ func (r *Registar) newRegMsg(unReg bool, localHost string, localPort int) *sip.M
 }
 func (r *Registar) HandleResponse(xl *xlog.Logger, tr *transport.Transport, resp *sip.Msg) bool {
 	if resp.CSeqMethod == sip.MethodRegister {
-		log.Println("got register response")
+		log.Println("got register response, code:", resp.Status)
 		r.handleRegResp(xl, tr, resp)
 		return true
 	}

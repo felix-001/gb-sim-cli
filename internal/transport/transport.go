@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"log"
 	"net"
 	"time"
 
@@ -27,7 +28,7 @@ func StartSip(xlog *xlog.Logger, remoteAddr string, transport string) (*Transpor
 		return nil, err
 	}
 	recvChan := make(chan *sip.Msg)
-	sendChan := make(chan *sip.Msg)
+	sendChan := make(chan *sip.Msg, 1000)
 	go send(xlog, net, sendChan)
 	go recv(xlog, net, recvChan)
 	tr := &Transport{
@@ -62,6 +63,7 @@ func send(xlog *xlog.Logger, conn *net.UDPConn, input chan *sip.Msg) {
 
 	for m := range input {
 		//xlog.Debug("send msg \n", m)
+		log.Printf("send addr: %p msg type: %s", m, m.Method)
 		if _, err := conn.Write([]byte(m.String())); err != nil {
 			xlog.Errorf("send msg failed, err = #v", err)
 		}
