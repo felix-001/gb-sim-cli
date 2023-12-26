@@ -50,6 +50,7 @@ type Invite struct {
 	remote *sdpRemoteInfo
 	rtp    *packet.RtpTransfer
 	byed   chan bool
+	byeCnt int
 }
 
 func init() {
@@ -262,9 +263,16 @@ func isPsHead(buf []byte) bool {
 	return false
 }
 
+var max = 3
+
 func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg) {
 	// only handle invite idle state
 	if m.IsResponse() {
+		return
+	}
+	inv.byeCnt++
+	if inv.byeCnt < max {
+		xlog.Info("bye cnt < max, return", inv.byeCnt)
 		return
 	}
 	xlog.Info("[S->C] bye, callId:", m.CallID)
