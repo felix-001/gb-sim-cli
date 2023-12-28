@@ -2,7 +2,6 @@ package useragent
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"regexp"
@@ -72,7 +71,7 @@ func (s *Service) HandleIncommingMsg() {
 		if !m.IsResponse() && m.CSeqMethod == sip.MethodMessage {
 			switch msgType(m) {
 			case CataLog:
-				log.Println("got Catalog req")
+				//				log.Println("got Catalog req")
 				s.catalogSrv.Handle(s.xlog, s.tr, m)
 			case Unknow:
 				fmt.Println("unknow msg, msg = ", m)

@@ -17,7 +17,7 @@ func init() {
 	log = xlog.New("streams")
 }
 
-//RtpTransfer ...
+// RtpTransfer ...
 type RtpTransfer struct {
 	datasrc      string
 	protocol     int // tcp or udp
@@ -48,7 +48,7 @@ func NewRRtpTransfer(src string, pro int, ssrc int) *RtpTransfer {
 	}
 }
 
-//Service ...
+// Service ...
 func (rtp *RtpTransfer) Service(srcip, dstip string, srcport, dstport int) error {
 
 	if nil == rtp.timerProcess {
@@ -85,9 +85,10 @@ func (rtp *RtpTransfer) Service(srcip, dstip string, srcport, dstport int) error
 	return nil
 }
 
-//Exit ...
+// Exit ...
 func (rtp *RtpTransfer) Exit() {
 
+	log.Println("rtp transfer exit")
 	if nil != rtp.timerProcess {
 		rtp.timerProcess.Stop()
 	}
@@ -229,14 +230,18 @@ func (rtp *RtpTransfer) write4udp() {
 						log.Errorf("write data by udp error(%v), len(%v).", err, lens)
 						goto UDPSTOP
 					}
+				} else {
+					log.Println("rtp udp conn closed")
 				}
 			} else {
 				log.Error("rtp data channel closed")
 				goto UDPSTOP
 			}
-		case <-rtp.timerProcess.C:
-			log.Error("channel recv data timeout")
-			goto UDPSTOP
+			/*
+				case <-rtp.timerProcess.C:
+					log.Error("channel recv data timeout")
+					goto UDPSTOP
+			*/
 		case <-rtp.writestop:
 			log.Error("udp rtp send channel stop")
 			goto UDPSTOP

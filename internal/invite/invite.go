@@ -63,6 +63,7 @@ func NewInvite(cfg *config.Config) *Invite {
 
 func (inv *Invite) HandleMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg) {
 	if m.CSeqMethod == sip.MethodInvite && strings.ToUpper(m.Payload.ContentType()) == "APPLICATION/SDP" {
+		xlog.Info("got invite")
 		inv.InviteMsg(xlog, tr, m)
 		return
 	}
@@ -102,7 +103,8 @@ func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 	} else {
 		r.proto = "UDP"
 	}
-	xlog.Info("[S->C] invite ", r.proto, "ssrc:", r.ssrc, "callId:", m.CallID)
+	xlog.Info("[S->C] invite ", r.proto, "ssrc:", r.ssrc, "callId:", m.CallID, "ip:", sdp.Addr, "port:", sdp.Video.Port)
+	xlog.Info("raw sdp:", string(m.Payload.Data()))
 
 	inv.remote = r
 
@@ -218,12 +220,17 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 	}()
 
 	buf, _ := ioutil.ReadAll(f)
+	i := 0
 	for {
 		select {
 		case <-inv.byed:
 			log.Println("got signal inv.byed exit")
 			goto end
 		default:
+			if i%800000 == 0 {
+				log.Println("rtp send file")
+			}
+			i++
 			inv.sendFile(buf, rtp)
 		}
 	}
@@ -248,6 +255,7 @@ func (inv *Invite) sendFile(buf []byte, rtp *packet.RtpTransfer) {
 	if i == len(buf) {
 		log.Println("reset i to 0")
 		i = 0
+		last = 0
 	}
 }
 func isPsHead(buf []byte) bool {
@@ -263,7 +271,7 @@ func isPsHead(buf []byte) bool {
 	return false
 }
 
-var max = 3
+var max = 5
 
 func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg) {
 	// only handle invite idle state
@@ -271,6 +279,7 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 		return
 	}
 	inv.byeCnt++
+	xlog.Info("byeCnt:", inv.byeCnt)
 	if inv.byeCnt < max {
 		xlog.Info("bye cnt < max, return", inv.byeCnt)
 		return
@@ -292,10 +301,10 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 	atomic.StoreInt32(&inv.state, idle)
 	xlog.Info("[C->S] 200OK(Bye)")
 	tr.Send <- resp
-	xlog.Info("notify inv.byed")
 	timeout := time.NewTimer(time.Millisecond * 500)
 	select {
 	case inv.byed <- true:
+		xlog.Info("notify inv.byed")
 		break
 	case <-timeout.C:
 		xlog.Info("notify inv.byed timeout")

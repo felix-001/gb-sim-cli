@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"log"
 	"net"
 	"time"
 
@@ -63,7 +62,7 @@ func send(xlog *xlog.Logger, conn *net.UDPConn, input chan *sip.Msg) {
 
 	for m := range input {
 		//xlog.Debug("send msg \n", m)
-		log.Printf("send addr: %p msg type: %s", m, m.Method)
+		//		log.Printf("send addr: %p msg type: %s", m, m.Method)
 		if _, err := conn.Write([]byte(m.String())); err != nil {
 			xlog.Errorf("send msg failed, err = #v", err)
 		}

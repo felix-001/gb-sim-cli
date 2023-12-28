@@ -79,7 +79,7 @@ func (r *Registar) Run(xlog *xlog.Logger, tr *transport.Transport) {
 				r.keepaliveLegs[int(r.keepaliveSeq)%r.cfg.MaxKeepaliveRetry] = Leg{req.CallID, req.From.Param.Get("tag").Value}
 				atomic.AddInt32(&r.keepaliveSeq, 1)
 				atomic.AddInt32(&r.keepaliveTimeoutCount, 1)
-				log.Println("send keepAlive")
+				//				log.Println("send keepAlive")
 				tr.Send <- req
 			}
 		case <-r.CloseChan:
@@ -151,7 +151,7 @@ func (r *Registar) HandleResponse(xl *xlog.Logger, tr *transport.Transport, resp
 		return true
 	}
 	if resp.CSeqMethod == sip.MethodMessage && r.keepAliveLeg(resp) {
-		log.Println("got keepAlive response")
+		//log.Println("got keepAlive response")
 		atomic.StoreInt32(&r.keepaliveTimeoutCount, 0)
 		return true
 	}
