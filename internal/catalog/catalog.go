@@ -37,8 +37,8 @@ type catalogQuery struct {
 func (catalog *Catalog) Handle(xlog *xlog.Logger, tr *transport.Transport, req *sip.Msg) {
 
 	// 1.send 200 ok response
-	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
-	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	laHost := tr.Conn.LocalAddr().(*net.TCPAddr).IP.String()
+	laPort := tr.Conn.LocalAddr().(*net.TCPAddr).Port
 	resp := catalog.makeCatalogRespFromReq(laHost, laPort, req)
 	tr.Send <- resp
 	time.Sleep(time.Millisecond * 10)
