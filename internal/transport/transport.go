@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"log"
 	"net"
 	"time"
 
@@ -12,17 +11,17 @@ import (
 const sipMaxPacketSize = 1500
 
 type Transport struct {
-	Conn *net.UDPConn
+	Conn *net.TCPConn
 	Recv chan *sip.Msg
 	Send chan *sip.Msg
 }
 
 func StartSip(xlog *xlog.Logger, remoteAddr string, transport string) (*Transport, error) {
-	rAddr, err := net.ResolveUDPAddr("udp", remoteAddr)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", remoteAddr)
 	if err != nil {
 		return nil, err
 	}
-	net, err := net.DialUDP(transport, nil, rAddr)
+	net, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		xlog.Errorf("err = %#v", err.Error())
 		return nil, err
@@ -40,7 +39,7 @@ func StartSip(xlog *xlog.Logger, remoteAddr string, transport string) (*Transpor
 	return tr, nil
 }
 
-func recv(xlog *xlog.Logger, conn *net.UDPConn, output chan *sip.Msg) {
+func recv(xlog *xlog.Logger, conn *net.TCPConn, output chan *sip.Msg) {
 
 	for {
 		buf := make([]byte, sipMaxPacketSize)
@@ -54,16 +53,16 @@ func recv(xlog *xlog.Logger, conn *net.UDPConn, output chan *sip.Msg) {
 			xlog.Errorf("parse msg failed, err =%v", err)
 			continue
 		}
-		//xlog.Debug("recv msg \n", msg)
+		xlog.Debug("recv msg \n", msg)
 		output <- msg
 	}
 }
 
-func send(xlog *xlog.Logger, conn *net.UDPConn, input chan *sip.Msg) {
+func send(xlog *xlog.Logger, conn *net.TCPConn, input chan *sip.Msg) {
 
 	for m := range input {
 		//xlog.Debug("send msg \n", m)
-		log.Printf("send addr: %p msg type: %s", m, m.Method)
+		//log.Printf("send addr: %p msg type: %s", m, m.Method)
 		if _, err := conn.Write([]byte(m.String())); err != nil {
 			xlog.Errorf("send msg failed, err = #v", err)
 		}
