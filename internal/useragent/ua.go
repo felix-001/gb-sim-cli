@@ -33,7 +33,7 @@ type Service struct {
 
 	regSrv     *reg.Registar
 	catalogSrv *catalog.Catalog
-	inviteSrv  *invite.Invite
+	InviteSrv  *invite.Invite
 }
 
 func NewService(xlog *xlog.Logger, cfg *config.Config) (*Service, error) {
@@ -50,7 +50,7 @@ func NewService(xlog *xlog.Logger, cfg *config.Config) (*Service, error) {
 		xlog:       xlog,
 		regSrv:     reg,
 		catalogSrv: catalog,
-		inviteSrv:  invite,
+		InviteSrv:  invite,
 	}
 	return srv, nil
 }
@@ -80,7 +80,7 @@ func (s *Service) HandleIncommingMsg() {
 		}
 
 		if m.CSeqMethod == sip.MethodInvite || m.CSeqMethod == sip.MethodBye || m.CSeqMethod == sip.MethodAck {
-			s.inviteSrv.HandleMsg(s.xlog, s.tr, m)
+			s.InviteSrv.HandleMsg(s.xlog, s.tr, m)
 		}
 	}
 }

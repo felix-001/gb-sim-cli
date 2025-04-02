@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 
 	cli "github.com/jawher/mow.cli"
@@ -11,6 +12,26 @@ import (
 	"github.com/lzh2nix/gb28181Simulator/internal/version"
 	"github.com/qiniu/x/xlog"
 )
+
+var globalSrv *useragent.Service
+
+func startServer(xlog *xlog.Logger, confPath *string) {
+	http.HandleFunc("/start", func(w http.ResponseWriter, r *http.Request) {
+		globalSrv.InviteSrv.Byed <- true
+		go func() {
+			app := cli.App("gb28181Simulator", "Runs the gb28181 simulator.")
+			app.Spec = "[ -c=<configuration path> ] "
+			confPath := app.StringOpt("c config", "sim.conf", "Specifies the configuration path (file) to use for the simulator.")
+			app.Action = func() { run(xlog, app, confPath) }
+
+			// Register sub-commands
+			app.Command("version", "Prints the version of the executable.", version.Print)
+			app.Run(os.Args)
+		}()
+		w.Write([]byte("ok"))
+	})
+	go http.ListenAndServe(":8080", nil)
+}
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -21,6 +42,7 @@ func main() {
 	app := cli.App("gb28181Simulator", "Runs the gb28181 simulator.")
 	app.Spec = "[ -c=<configuration path> ] "
 	confPath := app.StringOpt("c config", "sim.conf", "Specifies the configuration path (file) to use for the simulator.")
+	startServer(xlog, confPath)
 	app.Action = func() { run(xlog, app, confPath) }
 
 	// Register sub-commands
@@ -40,5 +62,6 @@ func run(xlog *xlog.Logger, app *cli.Cli, conf *string) {
 		xlog.Infof("new service failed err = %#v", err)
 		return
 	}
+	globalSrv = srv
 	srv.HandleIncommingMsg()
 }

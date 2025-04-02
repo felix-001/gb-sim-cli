@@ -1,7 +1,7 @@
 package invite
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -49,7 +49,7 @@ type Invite struct {
 	leg    *Leg
 	remote *sdpRemoteInfo
 	rtp    *packet.RtpTransfer
-	byed   chan bool
+	Byed   chan bool
 }
 
 func init() {
@@ -57,7 +57,7 @@ func init() {
 }
 func NewInvite(cfg *config.Config) *Invite {
 	rand.Seed(time.Now().UnixNano())
-	return &Invite{cfg: cfg, state: idle, byed: make(chan bool)}
+	return &Invite{cfg: cfg, state: idle, Byed: make(chan bool)}
 }
 
 func (inv *Invite) HandleMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg) {
@@ -81,14 +81,15 @@ func (inv *Invite) HandleMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg) {
 	// only handle invite idle state
 	if atomic.LoadInt32(&inv.state) != idle {
+		log.Println("recv invite msg at ", inv.state)
 		return
 	}
 	sdp, err := sdp.Parse(string(m.Payload.Data()))
 	if err != nil {
 		xlog.Error("parse sdp failed, err = ", err)
 	}
-	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
-	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	laHost := tr.Conn.LocalAddr().(*net.TCPAddr).IP.String()
+	laPort := tr.Conn.LocalAddr().(*net.TCPAddr).Port
 	r := &sdpRemoteInfo{
 		ssrc:  ssrc(sdp),
 		ip:    sdp.Addr,
@@ -213,13 +214,13 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 		log.Println("exit send rtp pkt routine callid:", inv.leg.callID, "ssrc:", inv.remote.ssrc)
 		f.Close()
 		rtp.Exit()
-		inv.rtp = nil
+		//inv.rtp = nil
 	}()
 
-	buf, _ := ioutil.ReadAll(f)
+	buf, _ := io.ReadAll(f)
 	for {
 		select {
-		case <-inv.byed:
+		case <-inv.Byed:
 			log.Println("got signal inv.byed exit")
 			goto end
 		default:
@@ -268,8 +269,8 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 		return
 	}
 	xlog.Info("[S->C] bye, callId:", m.CallID)
-	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
-	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	laHost := tr.Conn.LocalAddr().(*net.TCPAddr).IP.String()
+	laPort := tr.Conn.LocalAddr().(*net.TCPAddr).Port
 	xlog.Info("inv.state:", inv.state, "callId:", m.CallID)
 	if atomic.LoadInt32(&inv.state) != confirmed ||
 		inv.leg.callID != m.CallID ||
@@ -287,7 +288,7 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 	xlog.Info("notify inv.byed")
 	timeout := time.NewTimer(time.Millisecond * 500)
 	select {
-	case inv.byed <- true:
+	case inv.Byed <- true:
 		break
 	case <-timeout.C:
 		xlog.Info("notify inv.byed timeout")

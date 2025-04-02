@@ -17,7 +17,7 @@ func init() {
 	log = xlog.New("streams")
 }
 
-//RtpTransfer ...
+// RtpTransfer ...
 type RtpTransfer struct {
 	datasrc      string
 	protocol     int // tcp or udp
@@ -48,7 +48,7 @@ func NewRRtpTransfer(src string, pro int, ssrc int) *RtpTransfer {
 	}
 }
 
-//Service ...
+// Service ...
 func (rtp *RtpTransfer) Service(srcip, dstip string, srcport, dstport int) error {
 
 	if nil == rtp.timerProcess {
@@ -85,7 +85,7 @@ func (rtp *RtpTransfer) Service(srcip, dstip string, srcport, dstport int) error
 	return nil
 }
 
-//Exit ...
+// Exit ...
 func (rtp *RtpTransfer) Exit() {
 
 	if nil != rtp.timerProcess {
@@ -307,7 +307,7 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 	}
 	defer func() {
 		log.Println("write4tcpactive routine exit, ", rtp.tcpconn.LocalAddr().String())
-		rtp.tcpconn.Close()
+		//rtp.tcpconn.Close()
 		rtp.quit <- true
 	}()
 

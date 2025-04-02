@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"bytes"
 	"log"
 	"net"
 	"time"
@@ -50,14 +51,36 @@ func recv(xlog *xlog.Logger, conn *net.TCPConn, output chan *sip.Msg) {
 			//log.Println(err, n, "read from conn failed")
 			continue
 		}
-		log.Println("recv ", n, "bytes", "buf:", string(buf[:n]))
+		if bytes.Count(buf[:n], []byte("Content-Length:")) > 1 {
+			messageStart := bytes.Index(buf[:n], []byte("MESSAGE"))
+			if messageStart != -1 {
+				if messageStart < n {
+					firstPart := buf[:messageStart]
+					firstMsg, err := sip.ParseMsg(firstPart)
+					if err != nil {
+						log.Println("parse first msg failed, err =", err, "msg =", string(firstPart))
+						continue
+					}
+					output <- firstMsg
+					secondPart := buf[messageStart:n]
+					secondMsg, err := sip.ParseMsg(secondPart)
+					if err != nil {
+						log.Println("parse second msg failed, err =", err, "msg =", string(secondPart))
+						continue
+					}
+					output <- secondMsg
+				}
+
+			}
+		}
+
 		msg, err := sip.ParseMsg(buf[:n])
 		if err != nil {
 			//xlog.Errorf("parse msg failed, err =%v", err)
-			log.Println("parse msg failed, err =", err)
+			//log.Println("parse msg failed, err =", err)
 			continue
 		}
-		log.Println("recv msg \n", msg)
+		//log.Println("recv msg \n", msg)
 		output <- msg
 	}
 }
