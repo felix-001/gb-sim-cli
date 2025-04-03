@@ -18,6 +18,7 @@ var globalSrv *useragent.Service
 func startServer(xlog *xlog.Logger, confPath *string) {
 	http.HandleFunc("/start", func(w http.ResponseWriter, r *http.Request) {
 		globalSrv.InviteSrv.Byed <- true
+		globalSrv.Tr.Quit <- true
 		go func() {
 			app := cli.App("gb28181Simulator", "Runs the gb28181 simulator.")
 			app.Spec = "[ -c=<configuration path> ] "

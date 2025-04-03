@@ -16,6 +16,7 @@ type Transport struct {
 	Conn *net.TCPConn
 	Recv chan *sip.Msg
 	Send chan *sip.Msg
+	Quit chan bool
 }
 
 func StartSip(xlog *xlog.Logger, remoteAddr string, transport string) (*Transport, error) {
@@ -30,20 +31,29 @@ func StartSip(xlog *xlog.Logger, remoteAddr string, transport string) (*Transpor
 	}
 	recvChan := make(chan *sip.Msg, 1000)
 	sendChan := make(chan *sip.Msg, 1000)
-	go send(xlog, net, sendChan)
-	go recv(xlog, net, recvChan)
+	quitChan := make(chan bool)
+	go send(xlog, net, sendChan, quitChan)
+	go recv(xlog, net, recvChan, quitChan)
 	tr := &Transport{
 		Conn: net,
 		Recv: recvChan,
 		Send: sendChan,
+		Quit: quitChan,
 	}
 
 	return tr, nil
 }
 
-func recv(xlog *xlog.Logger, conn *net.TCPConn, output chan *sip.Msg) {
+func recv(xlog *xlog.Logger, conn *net.TCPConn, output chan *sip.Msg, quit chan bool) {
 
 	for {
+		select {
+		case <-quit:
+			log.Println("exit sip recv routine")
+			return
+		default:
+		}
+
 		buf := make([]byte, sipMaxPacketSize)
 		conn.SetReadDeadline(time.Now().Add(time.Second * 5))
 		n, err := conn.Read(buf)
@@ -85,9 +95,15 @@ func recv(xlog *xlog.Logger, conn *net.TCPConn, output chan *sip.Msg) {
 	}
 }
 
-func send(xlog *xlog.Logger, conn *net.TCPConn, input chan *sip.Msg) {
+func send(xlog *xlog.Logger, conn *net.TCPConn, input chan *sip.Msg, quit chan bool) {
 
 	for m := range input {
+		select {
+		case <-quit:
+			log.Println("exit sip send routine")
+			return
+		default:
+		}
 		//xlog.Debug("send msg \n", m)
 		//log.Printf("send addr: %p msg type: %s", m, m.Method)
 		if _, err := conn.Write([]byte(m.String())); err != nil {

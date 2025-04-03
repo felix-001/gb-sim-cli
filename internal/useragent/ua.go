@@ -28,7 +28,7 @@ const (
 var msgTypeRegexp = regexp.MustCompile(`<CmdType>([\w]+)</CmdType>`)
 
 type Service struct {
-	tr   *transport.Transport
+	Tr   *transport.Transport
 	xlog *xlog.Logger
 
 	regSrv     *reg.Registar
@@ -46,7 +46,7 @@ func NewService(xlog *xlog.Logger, cfg *config.Config) (*Service, error) {
 	invite := invite.NewInvite(cfg)
 	go reg.Run(xlog, tr)
 	srv := &Service{
-		tr:         tr,
+		Tr:         tr,
 		xlog:       xlog,
 		regSrv:     reg,
 		catalogSrv: catalog,
@@ -64,23 +64,23 @@ func msgType(m *sip.Msg) string {
 }
 func (s *Service) HandleIncommingMsg() {
 	s.hookSignals()
-	for m := range s.tr.Recv {
+	for m := range s.Tr.Recv {
 
-		if m.IsResponse() && s.regSrv.HandleResponse(s.xlog, s.tr, m) {
+		if m.IsResponse() && s.regSrv.HandleResponse(s.xlog, s.Tr, m) {
 			continue
 		}
 		if !m.IsResponse() && m.CSeqMethod == sip.MethodMessage {
 			switch msgType(m) {
 			case CataLog:
 				log.Println("got Catalog req")
-				s.catalogSrv.Handle(s.xlog, s.tr, m)
+				s.catalogSrv.Handle(s.xlog, s.Tr, m)
 			case Unknow:
 				fmt.Println("unknow msg, msg = ", m)
 			}
 		}
 
 		if m.CSeqMethod == sip.MethodInvite || m.CSeqMethod == sip.MethodBye || m.CSeqMethod == sip.MethodAck {
-			s.InviteSrv.HandleMsg(s.xlog, s.tr, m)
+			s.InviteSrv.HandleMsg(s.xlog, s.Tr, m)
 		}
 	}
 }
