@@ -19,6 +19,7 @@ type Config struct {
 	Transport         string       `json:"transport"`
 	GBID              string       `json:"gbID"`
 	Devices           []DeviceInfo `json:"devices"`
+	DetailLog         bool
 }
 
 type DeviceInfo struct {

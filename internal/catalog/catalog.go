@@ -51,49 +51,16 @@ func (catalog *Catalog) Handle(xlog *xlog.Logger, tr *transport.Transport, req *
 		return
 	}
 	if err := xml.Unmarshal(req.Payload.Data(), &q); err != nil {
-
+		log.Println("unmarshal xml failed, err = ", err, "msg = ", req)
 	}
 	catalogInfo := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, "", "")
-	log.Printf("catalogInfo0 addr: %p\n", catalogInfo)
+	log.Printf("send catalog\n")
 	go func() {
-		log.Println("send catalog response1")
 		tr.Send <- catalogInfo
-		log.Println("ch len after send catalog1:", len(tr.Send))
-	}()
-	catalogInfo1 := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, "32011500991320000081", "AlarmIn")
-	log.Printf("catalogInfo1 addr: %p\n", catalogInfo1)
-	go func() {
-		log.Println("send catalog response2")
-		tr.Send <- catalogInfo1
-		log.Println("ch len after send catalog2:", len(tr.Send))
 	}()
 	catalogInfo2 := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, "32011500991320000050", "")
-	log.Printf("catalogInfo2 addr: %p\n", catalogInfo2)
 	go func() {
-		log.Println("send catalog response3")
 		tr.Send <- catalogInfo2
-		log.Println("ch len after send catalog3:", len(tr.Send))
-	}()
-	catalogInfo3 := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, "32011500991320000051", "AlarmIn")
-	log.Printf("catalogInfo3 addr: %p\n", catalogInfo3)
-	go func() {
-		log.Println("send catalog response4")
-		tr.Send <- catalogInfo3
-		log.Println("ch len after send catalog4:", len(tr.Send))
-	}()
-	catalogInfo4 := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, "32011500991320000060", "")
-	log.Printf("catalogInfo4 addr: %p\n", catalogInfo4)
-	go func() {
-		log.Println("send catalog response5")
-		tr.Send <- catalogInfo4
-		log.Println("ch len after send catalog5:", len(tr.Send))
-	}()
-	catalogInfo5 := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, "32011500991320000061", "AlarmIn")
-	log.Printf("catalogInfo5 addr: %p\n", catalogInfo5)
-	go func() {
-		log.Println("send catalog response6")
-		tr.Send <- catalogInfo5
-		log.Println("ch len after send catalog6:", len(tr.Send))
 	}()
 }
 

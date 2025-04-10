@@ -37,7 +37,7 @@ type Service struct {
 }
 
 func NewService(xlog *xlog.Logger, cfg *config.Config) (*Service, error) {
-	tr, err := transport.StartSip(xlog, cfg.ServerAddr, cfg.Transport)
+	tr, err := transport.StartSip(xlog, cfg.ServerAddr, cfg.Transport, cfg)
 	if err != nil {
 		return nil, err
 	}
