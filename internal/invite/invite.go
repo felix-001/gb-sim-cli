@@ -50,6 +50,7 @@ type Invite struct {
 	remote *sdpRemoteInfo
 	rtp    *packet.RtpTransfer
 	byed   chan bool
+	sdp    *sdp.SDP
 }
 
 func init() {
@@ -62,6 +63,7 @@ func NewInvite(cfg *config.Config) *Invite {
 
 func (inv *Invite) HandleMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg) {
 	if m.CSeqMethod == sip.MethodInvite && strings.ToUpper(m.Payload.ContentType()) == "APPLICATION/SDP" {
+		log.Println("recv invite msg")
 		inv.InviteMsg(xlog, tr, m)
 		return
 	}
@@ -90,13 +92,21 @@ func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
 	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
 	r := &sdpRemoteInfo{
-		ssrc:  ssrc(sdp),
-		ip:    sdp.Addr,
-		port:  int(sdp.Video.Port),
+		ssrc: ssrc(sdp),
+		ip:   sdp.Addr,
+		//port:  int(sdp.Video.Port),
 		lPort: randomFromStartEnd(10000, 65535),
 		lip:   laHost,
 	}
-	if strings.HasPrefix(sdp.Video.Proto, "TCP") {
+	proto := ""
+	if sdp.Session == "Talk" {
+		r.port = int(sdp.Audio.Port)
+		proto = sdp.Audio.Proto
+	} else {
+		r.port = int(sdp.Video.Port)
+		proto = sdp.Video.Proto
+	}
+	if strings.HasPrefix(proto, "TCP") {
 		r.proto = "TCP"
 	} else {
 		r.proto = "UDP"
@@ -104,6 +114,7 @@ func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 	xlog.Info("[S->C] invite ", r.proto, "ssrc:", r.ssrc, "callId:", m.CallID)
 
 	inv.remote = r
+	inv.sdp = sdp
 
 	resp := inv.makeRespFromReq(laHost, laPort, m, true, 200)
 	inv.leg = &Leg{m.CallID, m.From.Param.Get("tag").Value, resp.To.Param.Get("tag").Value}
@@ -174,7 +185,12 @@ func (inv *Invite) AckMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 	xlog.Info("[S->C] invite ack")
 	atomic.StoreInt32(&inv.state, confirmed)
 	// start send rtp
-	go inv.sendRTPPacket(xlog)
+	if inv.sdp.Session == "Talk" {
+		log.Println("invite talk")
+		go inv.sendTalkRTPPacket(xlog)
+	} else {
+		inv.sendRTPPacket(xlog)
+	}
 }
 
 func randomFromStartEnd(min, max int) int {
@@ -227,6 +243,18 @@ func (inv *Invite) sendRTPPacket(xlog *xlog.Logger) {
 		}
 	}
 end:
+}
+
+func (inv *Invite) sendTalkRTPPacket(xlog *xlog.Logger) {
+	log.Println("new rtp talk transfer over tcp, ssrc:", inv.remote.ssrc, "callid:", inv.leg.callID)
+	rtp := packet.NewRRtpTransfer("", packet.TCPTransferActive, inv.remote.ssrc)
+	err := rtp.Service(inv.remote.lip, inv.remote.ip, inv.remote.lPort, inv.remote.port)
+	if err != nil {
+		xlog.Info("connect failed, err = ", err)
+		return
+	}
+	log.Println("start send rtp talk pkt")
+	rtp.SendTalkRtp()
 }
 
 var i = 0

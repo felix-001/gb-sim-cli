@@ -17,7 +17,7 @@ func init() {
 	log = xlog.New("streams")
 }
 
-//RtpTransfer ...
+// RtpTransfer ...
 type RtpTransfer struct {
 	datasrc      string
 	protocol     int // tcp or udp
@@ -48,7 +48,7 @@ func NewRRtpTransfer(src string, pro int, ssrc int) *RtpTransfer {
 	}
 }
 
-//Service ...
+// Service ...
 func (rtp *RtpTransfer) Service(srcip, dstip string, srcport, dstport int) error {
 
 	if nil == rtp.timerProcess {
@@ -85,7 +85,7 @@ func (rtp *RtpTransfer) Service(srcip, dstip string, srcport, dstport int) error
 	return nil
 }
 
-//Exit ...
+// Exit ...
 func (rtp *RtpTransfer) Exit() {
 
 	if nil != rtp.timerProcess {
@@ -158,6 +158,11 @@ func (rtp *RtpTransfer) SendPSdata(data []byte, key bool, pts uint64) bool {
 
 	}
 	return false
+}
+
+func (rtp *RtpTransfer) SendTalkRtp() {
+	payload := rtp.encRtpHeader([]byte{1, 2, 3}, 1, 0)
+	rtp.payload <- payload
 }
 
 func (rtp *RtpTransfer) fragmentation(data []byte, pts uint64, last int) bool {
@@ -309,6 +314,19 @@ func (rtp *RtpTransfer) write4tcpactive(dstaddr string, port int) {
 		log.Println("write4tcpactive routine exit, ", rtp.tcpconn.LocalAddr().String())
 		rtp.tcpconn.Close()
 		rtp.quit <- true
+	}()
+
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			_, err := rtp.tcpconn.Read(buf)
+			if err != nil {
+				log.Error("tcp read error", err, rtp.tcpconn.LocalAddr().String())
+				rtp.writestop <- true
+				return
+			}
+			log.Println("tcp recv rtp data", rtp.tcpconn.LocalAddr().String(), "len", len(buf), "data:", string(buf))
+		}
 	}()
 
 	count := 0

@@ -1,11 +1,11 @@
 package transport
 
 import (
-	"log"
 	"net"
 	"time"
 
 	"github.com/jart/gosip/sip"
+	"github.com/lzh2nix/gb28181Simulator/internal/config"
 	"github.com/qiniu/x/xlog"
 )
 
@@ -17,7 +17,7 @@ type Transport struct {
 	Send chan *sip.Msg
 }
 
-func StartSip(xlog *xlog.Logger, remoteAddr string, transport string) (*Transport, error) {
+func StartSip(xlog *xlog.Logger, remoteAddr string, transport string, cfg *config.Config) (*Transport, error) {
 	rAddr, err := net.ResolveUDPAddr("udp", remoteAddr)
 	if err != nil {
 		return nil, err
@@ -29,8 +29,8 @@ func StartSip(xlog *xlog.Logger, remoteAddr string, transport string) (*Transpor
 	}
 	recvChan := make(chan *sip.Msg)
 	sendChan := make(chan *sip.Msg, 1000)
-	go send(xlog, net, sendChan)
-	go recv(xlog, net, recvChan)
+	go send(xlog, net, sendChan, cfg)
+	go recv(xlog, net, recvChan, cfg)
 	tr := &Transport{
 		Conn: net,
 		Recv: recvChan,
@@ -40,7 +40,7 @@ func StartSip(xlog *xlog.Logger, remoteAddr string, transport string) (*Transpor
 	return tr, nil
 }
 
-func recv(xlog *xlog.Logger, conn *net.UDPConn, output chan *sip.Msg) {
+func recv(xlog *xlog.Logger, conn *net.UDPConn, output chan *sip.Msg, cfg *config.Config) {
 
 	for {
 		buf := make([]byte, sipMaxPacketSize)
@@ -54,16 +54,20 @@ func recv(xlog *xlog.Logger, conn *net.UDPConn, output chan *sip.Msg) {
 			xlog.Errorf("parse msg failed, err =%v", err)
 			continue
 		}
-		//xlog.Debug("recv msg \n", msg)
+		if cfg.DetailLog {
+			xlog.Debug("recv msg \n", msg)
+		}
 		output <- msg
 	}
 }
 
-func send(xlog *xlog.Logger, conn *net.UDPConn, input chan *sip.Msg) {
+func send(xlog *xlog.Logger, conn *net.UDPConn, input chan *sip.Msg, cfg *config.Config) {
 
 	for m := range input {
-		//xlog.Debug("send msg \n", m)
-		log.Printf("send addr: %p msg type: %s", m, m.Method)
+		if cfg.DetailLog {
+			xlog.Debug("send msg \n", m)
+		}
+		//log.Printf("send addr: %p msg type: %s", m, m.Method)
 		if _, err := conn.Write([]byte(m.String())); err != nil {
 			xlog.Errorf("send msg failed, err = #v", err)
 		}
