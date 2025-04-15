@@ -3,6 +3,7 @@ package catalog
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -53,15 +54,14 @@ func (catalog *Catalog) Handle(xlog *xlog.Logger, tr *transport.Transport, req *
 	if err := xml.Unmarshal(req.Payload.Data(), &q); err != nil {
 		log.Println("unmarshal xml failed, err = ", err, "msg = ", req)
 	}
-	catalogInfo := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, "", "")
-	log.Printf("send catalog\n")
-	go func() {
-		tr.Send <- catalogInfo
-	}()
-	catalogInfo2 := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, "32011500991320000050", "")
-	go func() {
-		tr.Send <- catalogInfo2
-	}()
+	log.Println("send catalog response")
+	for i := 0; i < catalog.cfg.Channels; i++ {
+		chid := fmt.Sprintf("320115009913200000%02d", i)
+		catalogInfo := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, chid, "Camera")
+		go func() {
+			tr.Send <- catalogInfo
+		}()
+	}
 }
 
 func (catalog *Catalog) sendCatalogResp(xlog *xlog.Logger, localHost string, localPort int, sn, chid, model string) *sip.Msg {

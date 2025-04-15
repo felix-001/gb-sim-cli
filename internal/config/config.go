@@ -19,6 +19,7 @@ type Config struct {
 	Transport         string       `json:"transport"`
 	GBID              string       `json:"gbID"`
 	Devices           []DeviceInfo `json:"devices"`
+	Channels          int          `json:"channels"`
 	DetailLog         bool
 }
 
@@ -52,5 +53,9 @@ func ParseJsonConfig(f *string) (*Config, error) {
 	}
 	var cfg Config
 	err = json.Unmarshal(b, &cfg)
+
+	if cfg.Channels == 0 {
+		cfg.Channels = 1
+	}
 	return &cfg, err
 }
