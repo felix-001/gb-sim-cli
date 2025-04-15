@@ -38,8 +38,15 @@ type catalogQuery struct {
 func (catalog *Catalog) Handle(xlog *xlog.Logger, tr *transport.Transport, req *sip.Msg) {
 
 	// 1.send 200 ok response
-	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
-	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	var laHost string
+	var laPort int
+	if catalog.cfg.Transport == "tcp" {
+		laHost = tr.TcpConn.LocalAddr().(*net.TCPAddr).IP.String()
+		laPort = tr.TcpConn.LocalAddr().(*net.TCPAddr).Port
+	} else {
+		laHost = tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
+		laPort = tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	}
 	resp := catalog.makeCatalogRespFromReq(laHost, laPort, req)
 	tr.Send <- resp
 	time.Sleep(time.Millisecond * 10)
@@ -56,7 +63,7 @@ func (catalog *Catalog) Handle(xlog *xlog.Logger, tr *transport.Transport, req *
 	}
 	log.Println("send catalog response")
 	for i := 0; i < catalog.cfg.Channels; i++ {
-		chid := fmt.Sprintf("320115009913200000%02d", i)
+		chid := fmt.Sprintf("32011500991320000%03d", i)
 		catalogInfo := catalog.sendCatalogResp(xlog, laHost, laPort, q.SN, chid, "Camera")
 		go func() {
 			tr.Send <- catalogInfo

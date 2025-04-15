@@ -57,18 +57,27 @@ func (r *Registar) Run(xlog *xlog.Logger, tr *transport.Transport) {
 	keepaliveTimer := time.Tick(time.Duration(r.cfg.KeepaliveInterval) * time.Second)
 
 	// send first  register
-	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
-	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	var laHost string
+	var laPort int
+	if r.cfg.Transport == "tcp" {
+		laHost = tr.TcpConn.LocalAddr().(*net.TCPAddr).IP.String()
+		laPort = tr.TcpConn.LocalAddr().(*net.TCPAddr).Port
+	} else {
+		laHost = tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
+		laPort = tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	}
 	req := r.newRegMsg(false, laHost, laPort)
 	tr.Send <- req
 
 	for {
 		select {
 		case <-regTimer:
+			log.Println("send register")
 			req := r.newRegMsg(false, laHost, laPort)
 			tr.Send <- req
 		case <-regRetry:
 			if atomic.LoadInt32(&r.registed) == 0 || atomic.LoadInt32(&r.keepaliveTimeoutCount) >= 3 {
+				log.Println("retry send register")
 				req := r.newRegMsg(false, laHost, laPort)
 				tr.Send <- req
 			}
@@ -84,6 +93,7 @@ func (r *Registar) Run(xlog *xlog.Logger, tr *transport.Transport) {
 			}
 		case <-r.CloseChan:
 			if atomic.CompareAndSwapInt32(&r.registed, 1, 0) {
+				log.Println("CloseChan send register")
 				req := r.newRegMsg(true, laHost, laPort)
 				tr.Send <- req
 			}
@@ -186,8 +196,15 @@ func (r *Registar) handleRegResp(xl *xlog.Logger, tr *transport.Transport, resp 
 				Algorithm:  ch.Algorithm,
 				MessageQop: ch.Qop,
 			}
-			laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
-			laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
+			var laHost string
+			var laPort int
+			if r.cfg.Transport == "tcp" {
+				laHost = tr.TcpConn.LocalAddr().(*net.TCPAddr).IP.String()
+				laPort = tr.TcpConn.LocalAddr().(*net.TCPAddr).Port
+			} else {
+				laHost = tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
+				laPort = tr.Conn.LocalAddr().(*net.UDPAddr).Port
+			}
 			req := r.newRegMsg(false, laHost, laPort)
 			authHeader, err := cred.authorize()
 			if err != nil {
@@ -199,6 +216,21 @@ func (r *Registar) handleRegResp(xl *xlog.Logger, tr *transport.Transport, resp 
 		}
 		if resp.Status == 200 && resp.Expires != 0 {
 			atomic.StoreInt32(&r.registed, 1)
+			log.Println("got register response, send keepAlive")
+			var laHost string
+			var laPort int
+			if r.cfg.Transport == "tcp" {
+				laHost = tr.TcpConn.LocalAddr().(*net.TCPAddr).IP.String()
+				laPort = tr.TcpConn.LocalAddr().(*net.TCPAddr).Port
+			} else {
+				laHost = tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
+				laPort = tr.Conn.LocalAddr().(*net.UDPAddr).Port
+			}
+			req := r.newKeepaliveMsg(laHost, laPort)
+			r.keepaliveLegs[int(r.keepaliveSeq)%r.cfg.MaxKeepaliveRetry] = Leg{req.CallID, req.From.Param.Get("tag").Value}
+			atomic.AddInt32(&r.keepaliveSeq, 1)
+			atomic.AddInt32(&r.keepaliveTimeoutCount, 1)
+			tr.Send <- req
 		}
 	}
 }

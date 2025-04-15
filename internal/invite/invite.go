@@ -89,8 +89,15 @@ func (inv *Invite) InviteMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.
 	if err != nil {
 		xlog.Error("parse sdp failed, err = ", err)
 	}
-	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
-	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	var laHost string
+	var laPort int
+	if inv.cfg.Transport == "tcp" {
+		laHost = tr.TcpConn.LocalAddr().(*net.TCPAddr).IP.String()
+		laPort = tr.TcpConn.LocalAddr().(*net.TCPAddr).Port
+	} else {
+		laHost = tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
+		laPort = tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	}
 	r := &sdpRemoteInfo{
 		ssrc: ssrc(sdp),
 		ip:   sdp.Addr,
@@ -296,8 +303,15 @@ func (inv *Invite) ByeMsg(xlog *xlog.Logger, tr *transport.Transport, m *sip.Msg
 		return
 	}
 	xlog.Info("[S->C] bye, callId:", m.CallID)
-	laHost := tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
-	laPort := tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	var laHost string
+	var laPort int
+	if inv.cfg.Transport == "tcp" {
+		laHost = tr.TcpConn.LocalAddr().(*net.TCPAddr).IP.String()
+		laPort = tr.TcpConn.LocalAddr().(*net.TCPAddr).Port
+	} else {
+		laHost = tr.Conn.LocalAddr().(*net.UDPAddr).IP.String()
+		laPort = tr.Conn.LocalAddr().(*net.UDPAddr).Port
+	}
 	xlog.Info("inv.state:", inv.state, "callId:", m.CallID)
 	if atomic.LoadInt32(&inv.state) != confirmed ||
 		inv.leg.callID != m.CallID ||
